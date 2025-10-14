@@ -1,99 +1,87 @@
-{
- "cells": [
-  {
-   "cell_type": "code",
-   "execution_count": 1,
-   "id": "f38d2a10-c8e0-46ac-aaea-b31e339b8ca7",
-   "metadata": {},
-   "outputs": [
-    {
-     "name": "stderr",
-     "output_type": "stream",
-     "text": [
-      "2025-10-13 19:50:21.594 \n",
-      "  \u001b[33m\u001b[1mWarning:\u001b[0m to view this Streamlit app on a browser, run it with the following\n",
-      "  command:\n",
-      "\n",
-      "    streamlit run C:\\Users\\soumy\\anaconda3\\Lib\\site-packages\\ipykernel_launcher.py [ARGUMENTS]\n"
-     ]
-    }
-   ],
-   "source": [
-    "import streamlit as st\n",
-    "import pandas as pd\n",
-    "import numpy as np\n",
-    "\n",
-    "# Streamlit title\n",
-    "st.title(\"📈 Nifty Stock Data Analysis\")\n",
-    "\n",
-    "# File uploader\n",
-    "uploaded_file = st.file_uploader(\"Upload your CSV file\", type=[\"csv\", \"xlsx\"])\n",
-    "\n",
-    "if uploaded_file is not None:\n",
-    "    # Read the file\n",
-    "    if uploaded_file.name.endswith(\".csv\"):\n",
-    "        df = pd.read_csv(uploaded_file)\n",
-    "    else:\n",
-    "        df = pd.read_excel(uploaded_file)\n",
-    "\n",
-    "    st.subheader(\"Preview of Uploaded Data\")\n",
-    "    st.dataframe(df.head())\n",
-    "\n",
-    "    # Drop columns 'Close' and 'Date'\n",
-    "    if 'Close' in df.columns and 'Date' in df.columns:\n",
-    "        x = df.drop(['Close', 'Date'], axis=1).values\n",
-    "        y = df['Close'].values\n",
-    "\n",
-    "        st.success(\"✅ Columns dropped successfully!\")\n",
-    "        st.write(f\"Shape of X: {x.shape}\")\n",
-    "        st.write(f\"Shape of y: {y.shape}\")\n",
-    "\n",
-    "        # Optionally visualize\n",
-    "        st.subheader(\"Close Price Over Time\")\n",
-    "        st.line_chart(df.set_index('Date')['Close'])\n",
-    "    else:\n",
-    "        st.error(\"⚠️ The dataset must contain 'Close' and 'Date' columns.\")\n",
-    "else:\n",
-    "    st.info(\"Please upload a dataset to begin.\")\n"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": null,
-   "id": "ee143e2b-129e-450b-95ee-c2237afcac91",
-   "metadata": {},
-   "outputs": [],
-   "source": []
-  },
-  {
-   "cell_type": "code",
-   "execution_count": null,
-   "id": "90f1cf76-0a4e-48be-8d94-234e1d81b011",
-   "metadata": {},
-   "outputs": [],
-   "source": []
-  }
- ],
- "metadata": {
-  "kernelspec": {
-   "display_name": "Python 3 (ipykernel)",
-   "language": "python",
-   "name": "python3"
-  },
-  "language_info": {
-   "codemirror_mode": {
-    "name": "ipython",
-    "version": 3
-   },
-   "file_extension": ".py",
-   "mimetype": "text/x-python",
-   "name": "python",
-   "nbconvert_exporter": "python",
-   "pygments_lexer": "ipython3",
-   "version": "3.12.7"
-  }
- },
- "nbformat": 4,
- "nbformat_minor": 5
-}
+import streamlit as st
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
+import matplotlib.pyplot as plt
 
+st.set_page_config(page_title="ML Regression App", layout="wide")
+
+st.title("📊 Machine Learning Regression App")
+st.write("Upload a CSV file, choose features and target, and train a regression model easily!")
+
+# File uploader
+uploaded_file = st.file_uploader("📂 Upload your dataset (CSV)", type=["csv"])
+
+if uploaded_file is not None:
+    df = pd.read_csv(uploaded_file)
+    st.subheader("📄 Dataset Preview")
+    st.dataframe(df.head())
+
+    st.write("### Dataset Summary")
+    st.write(df.describe())
+
+    # Feature and target selection
+    all_columns = df.columns.tolist()
+    x_cols = st.multiselect("Select Feature Columns (X)", options=all_columns)
+    y_col = st.selectbox("Select Target Column (y)", options=all_columns)
+
+    if x_cols and y_col:
+        X = df[x_cols]
+        y = df[y_col]
+
+        # Train-test split
+        test_size = st.slider("Test Size (as fraction)", 0.1, 0.5, 0.2)
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=test_size, random_state=42
+        )
+
+        # Model selection
+        st.write("### Choose a Regression Model")
+        model_choice = st.radio(
+            "Select Model",
+            ("Linear Regression", "Random Forest Regressor")
+        )
+
+        # Train model
+        if st.button("🚀 Train Model"):
+            if model_choice == "Linear Regression":
+                model = LinearRegression()
+            else:
+                model = RandomForestRegressor(n_estimators=100, random_state=42)
+
+            model.fit(X_train, y_train)
+            y_pred = model.predict(X_test)
+
+            # Evaluation
+            r2 = r2_score(y_test, y_pred)
+            mae = mean_absolute_error(y_test, y_pred)
+            rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+
+            st.subheader("📈 Model Performance")
+            st.write(f"**R² Score:** {r2:.4f}")
+            st.write(f"**MAE:** {mae:.4f}")
+            st.write(f"**RMSE:** {rmse:.4f}")
+
+            # Plot actual vs predicted
+            fig, ax = plt.subplots()
+            ax.scatter(y_test, y_pred, color='blue')
+            ax.plot([y_test.min(), y_test.max()],
+                    [y_test.min(), y_test.max()],
+                    color='red', linestyle='--')
+            ax.set_xlabel("Actual Values")
+            ax.set_ylabel("Predicted Values")
+            ax.set_title("Actual vs Predicted")
+            st.pyplot(fig)
+
+            # Show feature importance (for Random Forest)
+            if model_choice == "Random Forest Regressor":
+                importances = pd.Series(model.feature_importances_, index=x_cols)
+                st.bar_chart(importances)
+else:
+    st.info("👆 Upload a CSV file to get started.")
+
+st.markdown("---")
+st.caption("Built with ❤️ using Streamlit and Scikit-learn")
